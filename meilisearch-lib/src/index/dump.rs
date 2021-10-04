@@ -15,7 +15,7 @@ use crate::index::updates::apply_settings_to_builder;
 use crate::index_controller::{asc_ranking_rule, desc_ranking_rule};
 
 use super::error::Result;
-use super::{Index, Settings, Unchecked};
+use super::{index::Index, Settings, Unchecked};
 
 #[derive(Serialize, Deserialize)]
 struct DumpMeta {
