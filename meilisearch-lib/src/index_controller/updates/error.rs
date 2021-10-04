@@ -3,10 +3,7 @@ use std::fmt;
 
 use meilisearch_error::{Code, ErrorCode};
 
-use crate::{
-    document_formats::DocumentFormatError,
-    index_controller::update_file_store::UpdateFileStoreError,
-};
+use crate::{document_formats::DocumentFormatError, index::error::IndexError, index_controller::update_file_store::UpdateFileStoreError};
 
 pub type Result<T> = std::result::Result<T, UpdateLoopError>;
 
@@ -28,6 +25,8 @@ pub enum UpdateLoopError {
     // TODO: The reference to actix has to go.
     #[error("{0}")]
     PayloadError(#[from] actix_web::error::PayloadError),
+    #[error("{0}")]
+    IndexError(#[from] IndexError)
 }
 
 impl<T> From<tokio::sync::mpsc::error::SendError<T>> for UpdateLoopError
@@ -58,7 +57,6 @@ impl ErrorCode for UpdateLoopError {
         match self {
             Self::UnexistingUpdate(_) => Code::NotFound,
             Self::Internal(_) => Code::Internal,
-            //Self::IndexActor(e) => e.error_code(),
             Self::FatalUpdateStoreError => Code::Internal,
             Self::InvalidPayload(_) => Code::BadRequest,
             Self::MalformedPayload(_) => Code::BadRequest,
@@ -66,6 +64,7 @@ impl ErrorCode for UpdateLoopError {
                 actix_web::error::PayloadError::Overflow => Code::PayloadTooLarge,
                 _ => Code::Internal,
             },
+            Self::IndexError(e) => e.error_code(),
         }
     }
 }
