@@ -4,6 +4,9 @@ on:
 
 name: Publish binaries to release
 
+env:
+  CARGO_TERM_COLOR: always
+
 jobs:
   publish:
     name: Publish for ${{ matrix.os }}
@@ -28,7 +31,7 @@ jobs:
         rust-version: stable
     - uses: actions/checkout@v2
     - name: Build
-      run: cargo build --release --locked
+      run: cargo build --release --locked --verbose
     - name: Upload binaries to release
       uses: svenstaro/upload-release-action@v1-release
       with:
@@ -42,7 +45,7 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v2
-      - uses: uraimo/run-on-arch-action@v2.1.1
+      - uses: uraimo/run-on-arch-action@v2
         id: runcmd
         with:
           arch: aarch64 # aka ARMv8
@@ -54,7 +57,7 @@ jobs:
             apt install -y curl gcc make
             curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
             source $HOME/.cargo/env
-            cargo build --release --locked
+            cargo build --release --locked --verbose
       - name: Upload the binary to release
         uses: svenstaro/upload-release-action@v1-release
         with:
