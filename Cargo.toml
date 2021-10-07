@@ -7,8 +7,9 @@ members = [
 resolver = "2"
 
 [profile.release]
-lto = thin
+lto = "thin"
 opt-level = 3
+split-debuginfo = "packed"
 
 [build]
 rustflags = [ "-C", "link-arg=-fuse-ld=gold" ]
