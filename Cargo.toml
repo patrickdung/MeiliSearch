@@ -11,8 +11,5 @@ lto = "thin"
 opt-level = 3
 split-debuginfo = "packed"
 
-[build]
-rustflags = [ "-C", "link-arg=-fuse-ld=gold" ]
-
 [patch.crates-io]
 pest = { git = "https://github.com/pest-parser/pest.git", rev = "51fd1d49f1041f7839975664ef71fe15c7dcaf67" }
