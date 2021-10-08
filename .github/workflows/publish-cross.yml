@@ -59,7 +59,7 @@ jobs:
         echo "[target.aarch64-unknown-linux-gnu]" >> ~/.cargo/config
         echo "linker = "aarch64-linux-gnu-gcc" >> ~/.cargo/config
     - name: Install musl-gcc
-      if: {{matrix.target}} == "x86_64-unknown-linux-musl"
+      if: matrix.target == "x86_64-unknown-linux-musl"
       run: sudo apt install musl-tools
 
     - name: Install Rust
