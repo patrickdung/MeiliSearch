@@ -12,6 +12,7 @@ jobs:
   publish:
     name: Publish for ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    continue-on-error: true
     strategy:
       matrix:
         os: [ubuntu-18.04, macos-latest, windows-latest]
