@@ -37,7 +37,7 @@ jobs:
     - uses: actions/checkout@v2
     - name: Build
       run: |
-        cargo build --release --locked --verbose
+        cargo build --release --locked --verbose -Z unstable-options
         ls -lR ./target
     - name: Upload binaries to release
       uses: svenstaro/upload-release-action@v1-release
@@ -66,13 +66,13 @@ jobs:
           distro: ubuntu18.04
           env: |
             JEMALLOC_SYS_WITH_LG_PAGE: 16
-            RUSTFLAGS: '-Clink-arg=-fuse-ld=gold -Zunstable-options'
+            RUSTFLAGS: '-Clink-arg=-fuse-ld=gold'
           run: |
             apt update
             apt install -y curl gcc make
             curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
             source $HOME/.cargo/env
-            cargo build --release --locked --verbose
+            cargo build --release --locked --verbose -Z unstable-options
       - name: Upload the binary to release
         uses: svenstaro/upload-release-action@v1-release
         with:
@@ -87,7 +87,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-18.04]
         include:
         - build: aarch64
           os: ubuntu18.04
@@ -107,7 +106,7 @@ jobs:
         with:
           env: |
             JEMALLOC_SYS_WITH_LG_PAGE: 16
-            RUSTFLAGS: '-Clink-arg=-fuse-ld=gold -Zunstable-options'
+            RUSTFLAGS: '-Clink-arg=-fuse-ld=gold'
           run: |
             apt update
             echo "[target.aarch64-unknown-linux-gnu]" >> ~/.cargo/config
@@ -115,7 +114,7 @@ jobs:
             apt install -y gcc-aarch64-linux-gnu curl gcc make
             curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
             source $HOME/.cargo/env
-            cargo build --release --locked --verbose --target ${{ matrix.target }}
+            cargo build --release --locked --verbose --target ${{ matrix.target }} -Z unstable-options
       - name: Upload the binary to release
         uses: svenstaro/upload-release-action@v1-release
         with:
