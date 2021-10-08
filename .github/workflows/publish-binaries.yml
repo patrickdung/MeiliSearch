@@ -6,7 +6,7 @@ name: Publish binaries to release
 
 env:
   CARGO_TERM_COLOR: always
-  RUSTFLAGS: '-Clink-arg=-fuse-ld=gold'
+  # RUSTFLAGS: '-Clink-arg=-fuse-ld=gold'
 
 jobs:
   publish:
@@ -14,6 +14,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     continue-on-error: true
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-18.04, macos-latest, windows-latest]
         include:
@@ -65,7 +66,7 @@ jobs:
           distro: ubuntu18.04
           env: |
             JEMALLOC_SYS_WITH_LG_PAGE: 16
-            RUSTFLAGS: '-Clink-arg=-fuse-ld=gold'
+            RUSTFLAGS: '-Clink-arg=-fuse-ld=gold -Zunstable-options'
           run: |
             apt update
             apt install -y curl gcc make
@@ -84,19 +85,29 @@ jobs:
     name: Publish for ARMv8 with cross compile
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-18.04]
         include:
         - build: aarch64
           os: ubuntu18.04
-          rust: stable
+          target: aarch64-unknown-linux-gnu
+          asset_name: meilisearch-linux-armv8-cross
+        - build: linux
+          os: ubuntu18.04
+          target: x86_64-unknown-linux-musl
+          asset_name: meilisearch-linux-amd64-musl
+        - build: linux
+          os: ubuntu18.04
+          target: x86_64-unknown-linux-gnu
+          asset_name: meilisearch-linux-amd64-cross
     steps:
       - uses: actions/checkout@v2
         id: runcmd
         with:
           env: |
             JEMALLOC_SYS_WITH_LG_PAGE: 16
-            RUSTFLAGS: '-Clink-arg=-fuse-ld=gold'
+            RUSTFLAGS: '-Clink-arg=-fuse-ld=gold -Zunstable-options'
           run: |
             apt update
             echo "[target.aarch64-unknown-linux-gnu]" >> ~/.cargo/config
@@ -104,11 +115,12 @@ jobs:
             apt install -y gcc-aarch64-linux-gnu curl gcc make
             curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
             source $HOME/.cargo/env
-            cargo build --release --locked --verbose --target aarch64-unknown-linux-gnu
+            cargo build --release --locked --verbose --target ${{ matrix.target }}
       - name: Upload the binary to release
         uses: svenstaro/upload-release-action@v1-release
         with:
           repo_token: ${{ secrets.PUBLISH_TOKEN }}
           file: target/release/meilisearch
-          asset_name: meilisearch-linux-armv8-cross
+          # asset_name: meilisearch-linux-armv8-cross
+          asset_name: ${{ matrix.asset_name }}
           tag: ${{ github.ref }}
