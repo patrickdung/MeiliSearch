@@ -7,8 +7,9 @@ members = [
 resolver = "2"
 
 [profile.release]
-lto = "thin"
-opt-level = 3
+# lto = "thin"
+opt-level = 0
+# opt-level = 3
 split-debuginfo = "packed"
 
 [patch.crates-io]
