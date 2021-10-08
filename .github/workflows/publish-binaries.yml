@@ -6,6 +6,7 @@ name: Publish binaries to release
 
 env:
   CARGO_TERM_COLOR: always
+  RUSTFLAGS: '-Clink-arg=-fuse-ld=gold'
 
 jobs:
   publish:
@@ -18,6 +19,8 @@ jobs:
           - os: ubuntu-18.04
             artifact_name: meilisearch
             asset_name: meilisearch-linux-amd64
+            artifact_name_debug: meilisearch.dwp
+            asset_name_debug: meilisearch-linux-amd64.dwp
           - os: macos-latest
             artifact_name: meilisearch
             asset_name: meilisearch-macos-amd64
@@ -31,13 +34,22 @@ jobs:
         rust-version: stable
     - uses: actions/checkout@v2
     - name: Build
-      run: cargo build --release --locked --verbose
+      run: |
+        cargo build --release --locked --verbose
+        ls -l .
     - name: Upload binaries to release
       uses: svenstaro/upload-release-action@v1-release
       with:
         repo_token: ${{ secrets.PUBLISH_TOKEN }}
         file: target/release/${{ matrix.artifact_name }}
         asset_name: ${{ matrix.asset_name }}
+        tag: ${{ github.ref }}
+    - name: Upload debug binaries to release
+      uses: svenstaro/upload-release-action@v1-release
+      with:
+        repo_token: ${{ secrets.PUBLISH_TOKEN }}
+        file: target/release/${{ matrix.artifact_name_debug }}
+        asset_name: ${{ matrix.asset_name_debug }}
         tag: ${{ github.ref }}
 
   publish-armv8:
@@ -64,4 +76,35 @@ jobs:
           repo_token: ${{ secrets.PUBLISH_TOKEN }}
           file: target/release/meilisearch
           asset_name: meilisearch-linux-armv8
+          tag: ${{ github.ref }}
+
+  publish-armv8_cross:
+    name: Publish for ARMv8 with cross compile
+    runs-on: ${{matrix.os}}
+    strategy:
+      matrix:
+        include:
+        - build: aarch64
+          os: ubuntu18.04
+          rust: stable
+    steps:
+      - uses: actions/checkout@v2
+        id: runcmd
+        with:
+          env: |
+            JEMALLOC_SYS_WITH_LG_PAGE: 16
+          run: |
+            apt update
+            echo "[target.aarch64-unknown-linux-gnu]" >> ~/.cargo/config
+            echo "linker = "aarch64-linux-gnu-gcc" >> ~/.cargo/config
+            apt install -y gcc-aarch64-linux-gnu curl gcc make
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
+            source $HOME/.cargo/env
+            cargo build --release --locked --verbose --target aarch64-unknown-linux-gnu
+      - name: Upload the binary to release
+        uses: svenstaro/upload-release-action@v1-release
+        with:
+          repo_token: ${{ secrets.PUBLISH_TOKEN }}
+          file: target/release/meilisearch
+          asset_name: meilisearch-linux-armv8-cross
           tag: ${{ github.ref }}
