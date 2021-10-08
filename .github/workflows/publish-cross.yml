@@ -57,9 +57,12 @@ jobs:
         sudo apt install ${{ matrix.linker }}
         ## cat .cargo/config.github >> .cargo/config
         echo "[target.aarch64-unknown-linux-gnu]" >> ~/.cargo/config
-        echo "linker = "aarch64-linux-gnu-gcc" >> ~/.cargo/config
-    - name: Install musl-gcc
+        echo 'linker = "aarch64-linux-gnu-gcc"' >> ~/.cargo/config
+
+    - name: Target musl
       if: matrix.target == 'x86_64-unknown-linux-musl'
+      env:
+       RUSTFLAGS: "-C target-feature=-crt-static"
       run: sudo apt install musl-tools
 
     - name: Install Rust
