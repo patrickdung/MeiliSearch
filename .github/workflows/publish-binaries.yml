@@ -112,7 +112,7 @@ jobs:
           rustup target add ${{ matrix.target }}
           rustup show
       - name: Build binary
-        with:
+        ## with:
           env: |
             JEMALLOC_SYS_WITH_LG_PAGE: 16
             RUSTFLAGS: '-Clink-arg=-fuse-ld=gold'
