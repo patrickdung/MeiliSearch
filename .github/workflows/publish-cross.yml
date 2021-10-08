@@ -1,4 +1,4 @@
-name: Release
+name: Release cross built
 
 on:
   push:
@@ -55,7 +55,12 @@ jobs:
       run: |
         sudo apt update
         sudo apt install ${{ matrix.linker }}
-        cat .cargo/config.github >> .cargo/config
+        ## cat .cargo/config.github >> .cargo/config
+        echo "[target.aarch64-unknown-linux-gnu]" >> ~/.cargo/config
+        echo "linker = "aarch64-linux-gnu-gcc" >> ~/.cargo/config
+    - name: Install musl-gcc
+      if: target == "x86_64-unknown-linux-musl"
+      run: sudo apt install musl-tools
 
     - name: Install Rust
       run: |
