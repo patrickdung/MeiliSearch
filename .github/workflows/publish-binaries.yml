@@ -36,8 +36,10 @@ jobs:
         rust-version: stable
     - uses: actions/checkout@v2
     - name: Build
+      # -Z options can only be used in rust nightly build
+        # cargo build --release --locked --verbose -Z unstable-options
       run: |
-        cargo build --release --locked --verbose -Z unstable-options
+        cargo build --release --locked --verbose
         ls -lR ./target
     - name: Upload binaries to release
       uses: svenstaro/upload-release-action@v1-release
@@ -72,7 +74,7 @@ jobs:
             apt install -y curl gcc make
             curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
             source $HOME/.cargo/env
-            cargo build --release --locked --verbose -Z unstable-options
+            cargo build --release --locked --verbose
       - name: Upload the binary to release
         uses: svenstaro/upload-release-action@v1-release
         with:
@@ -114,7 +116,7 @@ jobs:
             apt install -y gcc-aarch64-linux-gnu curl gcc make
             curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
             source $HOME/.cargo/env
-            cargo build --release --locked --verbose --target ${{ matrix.target }} -Z unstable-options
+            cargo build --release --locked --verbose --target ${{ matrix.target }} 
       - name: Upload the binary to release
         uses: svenstaro/upload-release-action@v1-release
         with:
