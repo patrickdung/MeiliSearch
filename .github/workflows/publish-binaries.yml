@@ -79,11 +79,12 @@ jobs:
           asset_name: meilisearch-linux-armv8
           tag: ${{ github.ref }}
 
-  publish-armv8_cross:
+  publish-armv8-cross:
     name: Publish for ARMv8 with cross compile
-    runs-on: ${{matrix.os}}
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
+        os: [ubuntu-18.04]
         include:
         - build: aarch64
           os: ubuntu18.04
