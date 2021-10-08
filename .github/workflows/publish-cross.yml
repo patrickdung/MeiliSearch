@@ -1,8 +1,9 @@
-on:
-  release:
-    types: [published]
+name: Release
 
-name: Publish binaries to release with cross compile
+on:
+  push:
+    tags:
+      - v*
 
 env:
   CARGO_TERM_COLOR: always
@@ -14,98 +15,126 @@ env:
   #  RUSTFLAGS: '-Clink-arg=-fuse-ld=gold'
 
 jobs:
+  publish-crate:
+    name: Publish Crate
+    runs-on: ubuntu-18.04
+    steps:
+    - name: Clone
+      uses: actions/checkout@v2
+    - name: Cache
+      uses: actions/cache@v2
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          ~/.rustup
+          target
+        key: ${{ runner.os }}-stable
+    - name: Setup
+      run: |
+        rustup install stable
+    - name: Build
+      run: cargo build --verbose
+    - name: Run tests
+      run: cargo test
+    - name: Publish
+      run: cargo publish
+      env:
+        CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
-  publish-armv8-cross:
-    name: Publish for ARMv8 with cross compile
+  publish-to-github:
+    name: Publish to Github
     runs-on: ${{matrix.os}}
     strategy:
-      fail-fast: false
       matrix:
         include:
-          - build: linux
-            os: ubuntu-18.04
-            rust: stable
-            target: x86_64-unknown-linux-musl
-            cross: false
-            asset_name: meilisearch-linux-amd64-musl
-          - build: aarch64
-            os: ubuntu-18.04
-            rust: stable
-            target: aarch64-unknown-linux-gnu
-            linker: gcc-aarch64-linux-gnu
-            cross: true
-            asset_name: meilisearch-linux-armv8-cross
-      steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-        # with:
-        #  fetch-depth: 1
+        - build: linux
+          os: ubuntu-18.04
+          rust: stable
+          target: x86_64-unknown-linux-musl
+          cross: false
+        - build: aarch64
+          os: ubuntu-18.04
+          rust: stable
+          target: aarch64-unknown-linux-gnu
+          linker: gcc-aarch64-linux-gnu
+          cross: true
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 1
 
-      - name: Cache
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            ~/.rustup
-            target
-          key: ${{ runner.os }}-${{ matrix.rust }}
+    - name: Cache
+      uses: actions/cache@v2
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          ~/.rustup
+          target
+        key: ${{ runner.os }}-${{ matrix.rust }}
 
-      - name: Install Linker
-        if: matrix.cross
-        run: |
-          sudo apt update
-          sudo apt install ${{ matrix.linker }}
-          cat .cargo/config.github >> .cargo/config
-      - name: Install Rust
-        run: |
-          rustup install ${{ matrix.rust }}
-          rustup target add ${{ matrix.target }}
-          rustup show
-      - name: Build
-        run: |
-          echo "[target.aarch64-unknown-linux-gnu]" >> ~/.cargo/config
-          echo "linker = "aarch64-linux-gnu-gcc" >> ~/.cargo/config
-          apt install -y gcc-aarch64-linux-gnu curl gcc make
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
-          source $HOME/.cargo/env
-          cargo build --release --locked --verbose --target ${{ matrix.target }}
+    - name: Install Linker
+      if: matrix.cross
+      run: |
+        sudo apt update
+        sudo apt install ${{ matrix.linker }}
+        cat .cargo/config.github >> .cargo/config
 
-      - name: Package Artifacts
-        run: |
-          src=$(pwd)
-          stage=
-          case $RUNNER_OS in
-              Linux)
-                  stage=$(mktemp -d)
-                  ;;
-              macOS)
-                  stage=$(mktemp -d -t tmp)
-                  ;;
-          esac
-          cp target/${{ matrix.target }}/release/sysit $stage/
-          cd $stage
-          RELEASE_VERSION=${GITHUB_REF#refs/tags/}
-          ASSET_NAME="sysit-$RELEASE_VERSION-${{ matrix.target }}.tar.gz"
-          ASSET_PATH="$src/$ASSET_NAME"
-          CHECKSUM_PATH="$ASSET_PATH.sha256"
-          echo "ASSET_PATH=$ASSET_PATH" >> $GITHUB_ENV
-          echo "CHECKSUM_PATH=$CHECKSUM_PATH" >> $GITHUB_ENV
-          tar czf $ASSET_PATH *
-          cd $src
-          case $RUNNER_OS in
-              Linux)
-                  sha256sum $ASSET_NAME > $CHECKSUM_PATH
-                  ;;
-              macOS)
-                  shasum -a 256 $ASSET_NAME > $CHECKSUM_PATH
-                  ;;
-          esac
+    - name: Install Rust
+      run: |
+        rustup install ${{ matrix.rust }}
+        rustup target add ${{ matrix.target }}
+        rustup show
 
-      - name: Upload the binary to release
-        uses: svenstaro/upload-release-action@v1-release
-        with:
-          repo_token: ${{ secrets.PUBLISH_TOKEN }}
-          file: target/release/meilisearch
-          asset_name: ${{ matrix.asset_name }}
-          tag: ${{ github.ref }}
+    - name: Build
+      run: cargo build --release --target ${{ matrix.target }}
+
+    - name: Package Artifacts
+      run: |
+        src=$(pwd)
+        stage=
+        case $RUNNER_OS in
+            Linux)
+                stage=$(mktemp -d)
+                ;;
+            macOS)
+                stage=$(mktemp -d -t tmp)
+                ;;
+        esac
+
+        cp target/${{ matrix.target }}/release/sysit $stage/
+        cd $stage
+
+        RELEASE_VERSION=${GITHUB_REF#refs/tags/}
+        ASSET_NAME="sysit-$RELEASE_VERSION-${{ matrix.target }}.tar.gz"
+        ASSET_PATH="$src/$ASSET_NAME"
+        CHECKSUM_PATH="$ASSET_PATH.sha256"
+
+        echo "ASSET_PATH=$ASSET_PATH" >> $GITHUB_ENV
+        echo "CHECKSUM_PATH=$CHECKSUM_PATH" >> $GITHUB_ENV
+
+        tar czf $ASSET_PATH *
+
+        cd $src
+
+        case $RUNNER_OS in
+            Linux)
+                sha256sum $ASSET_NAME > $CHECKSUM_PATH
+                ;;
+            macOS)
+                shasum -a 256 $ASSET_NAME > $CHECKSUM_PATH
+                ;;
+        esac
+
+
+    - name: Release
+      uses: softprops/action-gh-release@v1
+      if: startsWith(github.ref, 'refs/tags/')
+      with:
+        files: |
+          ${{ env.ASSET_PATH }}
+          ${{ env.CHECKSUM_PATH }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.PUBLISH_TOKEN }}
