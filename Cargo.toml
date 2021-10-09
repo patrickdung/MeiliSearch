@@ -10,6 +10,6 @@ resolver = "2"
 pest = { git = "https://github.com/pest-parser/pest.git", rev = "51fd1d49f1041f7839975664ef71fe15c7dcaf67" }
 
 [profile.release]
-opt-level = 0
-#opt-level = 3
-#lto = "thin"
+#opt-level = 0
+opt-level = 3
+lto = "thin"

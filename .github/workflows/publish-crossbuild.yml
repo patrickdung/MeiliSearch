@@ -95,7 +95,7 @@ jobs:
       - name: Strip debuginfo for target aarch64 GNU
         if: matrix.target == 'aarch64-unknown-linux-gnu'
         run: |
-          /usr/bin/aarch64-linux-gnu-strip --strip-debug --target=elf64-littleaarch64 target/${{ matrix.target }}/release/meilisearch -o target/${{ matrix.target }}/release/meilisearch.stripped
+          /usr/bin/aarch64-linux-gnu-strip --strip-debug --target=elf64-littleaarch64 target/${{ matrix.target }}/release/meilisearch -o target/${{ matrix.target }}/release/meilisearch-stripped
 
       - name: List target output files
         run: ls -lR ./target
