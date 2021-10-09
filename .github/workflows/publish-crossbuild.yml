@@ -57,7 +57,7 @@ jobs:
         run: |
           sudo apt-get install -y ${{ matrix.linker }}
 
-      - name: Target aarch64 GNU
+      - name: Configure target aarch64 GNU
         if: matrix.target == 'aarch64-unknown-linux-gnu'
         # LD gold won't work with MUSL
         env:
@@ -68,23 +68,20 @@ jobs:
           echo 'linker = "aarch64-linux-gnu-gcc"' >> ~/.cargo/config
           # echo 'JEMALLOC_SYS_WITH_LG_PAGE=16' >> $GITHUB_ENV
 
-      - name: Target aarch64 MUSL
+      - name: Configure target aarch64 MUSL
         if: matrix.target == 'aarch64-unknown-linux-musl'
         env:
           JEMALLOC_SYS_WITH_LG_PAGE: 16
           # RUSTFLAGS: "-C target-feature=-crt-static"
         run: |
           sudo apt-get install -y musl-tools
-          # echo 'JEMALLOC_SYS_WITH_LG_PAGE=16' >> $GITHUB_ENV
-          ## echo 'RUSTFLAGS="-C target-feature=-crt-static"' >> $GITHUB_ENV
 
-      - name: Target x86_64 MUSL
+      - name: Configure target x86_64 MUSL
         if: matrix.target == 'x86_64-unknown-linux-musl'
         # env:
-          # RUSTFLAGS: "-C target-feature=-crt-static"
+        #   RUSTFLAGS: "-C target-feature=-crt-static"
         run: |
           sudo apt-get install -y musl-tools
-          ## echo 'RUSTFLAGS="-C target-feature=-crt-static"' >> $GITHUB_ENV
 
       - name: Cargo build
         uses: actions-rs/cargo@v1
@@ -92,6 +89,13 @@ jobs:
           command: build
           use-cross: ${{ matrix.use-cross }}
           args: --release --target ${{ matrix.target }}
+
+      # Strip debuginfo for target aarch64 GNU
+      # MUSL binary are static linked
+      - name: Strip debuginfo for target aarch64 GNU
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          /usr/bin/aarch64-linux-gnu-strip --strip-debug --target=elf64-littleaarch64 target/${{ matrix.target }}/release/meilisearch -o target/${{ matrix.target }}/release/meilisearch.stripped
 
       - name: List target output files
         run: ls -lR ./target
@@ -102,4 +106,11 @@ jobs:
           repo_token: ${{ secrets.PUBLISH_TOKEN }}
           file: target/${{ matrix.target }}/release/meilisearch
           asset_name: ${{ matrix.asset_name }}
+          tag: ${{ github.ref }}
+      - name: Upload stripped binary to release (aarch64 GNU only)
+        uses: svenstaro/upload-release-action@v1-release
+        with:
+          repo_token: ${{ secrets.PUBLISH_TOKEN }}
+          file: target/${{ matrix.target }}/release/meilisearch-stripped
+          asset_name: ${{ matrix.asset_name }}-stripped
           tag: ${{ github.ref }}
