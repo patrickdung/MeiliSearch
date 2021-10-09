@@ -35,10 +35,11 @@ jobs:
           use-cross: true
           asset_name: meilisearch-linux-aarch64-musl
         - build: linux
-          os: ubuntu-18.04
+          os: ubuntu-latest
           target: x86_64-unknown-linux-musl
-          use-cross: false
+          use-cross: true
           asset_name: meilisearch-linux-x86_64-musl
+
     steps:
 
     - name: Checkout repository
@@ -88,12 +89,6 @@ jobs:
         sudo apt-get install -y musl-tools
         #echo 'RUSTFLAGS="-C target-feature=-crt-static"' >> $GITHUB_ENV
 
-    # - name: Install Rust
-    #  run: |
-    #    rustup install ${{ matrix.rust }}
-    #    rustup target add ${{ matrix.target }}
-    #    rustup show
-
     - name: Cargo build
       uses: actions-rs/cargo@v1
       with:
@@ -102,15 +97,12 @@ jobs:
         args: --release --target ${{ matrix.target }}
 
     - name: List files
-      run: ls -lR .
-
-    # - name: Build
-    #  run: cargo build --release --target ${{ matrix.target }}
+      run: ls -lR ./target
 
     - name: Upload the binary to release
       uses: svenstaro/upload-release-action@v1-release
       with:
         repo_token: ${{ secrets.PUBLISH_TOKEN }}
-        file: target/release/meilisearch
-        asset_name: meilisearch-linux-armv8
+        file: target/${{ matrix.target }}/release/meilisearch
+        asset_name: ${{ matrix.asset_name }}
         tag: ${{ github.ref }}
