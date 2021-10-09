@@ -1,0 +1,116 @@
+name: Release using cross built
+
+on:
+  push:
+    branches:
+      - v0.23.0rc2-cross
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: '-Clink-arg=-fuse-ld=gold'
+  # JEMALLOC_SYS_WITH_LG_PAGE: 16
+  # env: |
+  #  JEMALLOC_SYS_WITH_LG_PAGE: 16
+  #  RUSTFLAGS: '-Clink-arg=-fuse-ld=gold'
+
+jobs:
+  publish-to-github:
+    name: Publish to Github
+    runs-on: ${{ matrix.os }}
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - build: aarch64
+          os: ubuntu-18.04
+          target: aarch64-unknown-linux-gnu
+          linker: gcc-aarch64-linux-gnu
+          use-cross: true
+          asset_name: meilisearch-linux-aarch64
+        - build: aarch64
+          os: ubuntu-18.04
+          target: aarch64-unknown-linux-musl
+          linker: gcc-aarch64-linux-gnu
+          use-cross: true
+          asset_name: meilisearch-linux-aarch64-musl
+        - build: linux
+          os: ubuntu-18.04
+          target: x86_64-unknown-linux-musl
+          use-cross: false
+          asset_name: meilisearch-linux-x86_64-musl
+    steps:
+
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Installing Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        profile: minimal
+        target: ${{ matrix.target }}
+        override: true
+
+    - name: APT update
+      run: |
+        sudo apt update
+
+    - name: Install target specific tools
+      if: matrix.use-cross
+      run: |
+        sudo apt-get install -y ${{ matrix.linker }}
+
+    - name: Target aarch64
+      if: matrix.target == 'aarch64-unknown-linux-gnu'
+      #env: |
+      #  JEMALLOC_SYS_WITH_LG_PAGE: 16
+      run: |
+        echo '[target.aarch64-unknown-linux-gnu]' >> ~/.cargo/config
+        echo 'linker = "aarch64-linux-gnu-gcc"' >> ~/.cargo/config
+        echo 'JEMALLOC_SYS_WITH_LG_PAGE=16' >> $GITHUB_ENV
+
+    - name: Target musl aarch64
+      if: matrix.target == 'aarch64-unknown-linux-musl'
+      # env: |
+      #  JEMALLOC_SYS_WITH_LG_PAGE: 16
+      #  RUSTFLAGS: "-C target-feature=-crt-static"
+      run: |
+        sudo apt-get install -y musl-tools
+        echo 'JEMALLOC_SYS_WITH_LG_PAGE=16' >> $GITHUB_ENV
+        #echo 'RUSTFLAGS="-C target-feature=-crt-static"' >> $GITHUB_ENV
+
+    - name: Target musl x86_64
+      if: matrix.target == 'x86_64-unknown-linux-musl'
+      # env: |
+      #  RUSTFLAGS: "-C target-feature=-crt-static"
+      run: |
+        sudo apt-get install -y musl-tools
+        #echo 'RUSTFLAGS="-C target-feature=-crt-static"' >> $GITHUB_ENV
+
+    # - name: Install Rust
+    #  run: |
+    #    rustup install ${{ matrix.rust }}
+    #    rustup target add ${{ matrix.target }}
+    #    rustup show
+
+    - name: Cargo build
+      uses: actions-rs/cargo@v1
+      with:
+        command: build
+        use-cross: ${{ matrix.use-cross }}
+        args: --release --target ${{ matrix.target }}
+
+    - name: List files
+      run: ls -lR .
+
+    # - name: Build
+    #  run: cargo build --release --target ${{ matrix.target }}
+
+    - name: Upload the binary to release
+      uses: svenstaro/upload-release-action@v1-release
+      with:
+        repo_token: ${{ secrets.PUBLISH_TOKEN }}
+        file: target/release/meilisearch
+        asset_name: meilisearch-linux-armv8
+        tag: ${{ github.ref }}
