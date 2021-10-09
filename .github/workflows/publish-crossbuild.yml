@@ -108,6 +108,7 @@ jobs:
           asset_name: ${{ matrix.asset_name }}
           tag: ${{ github.ref }}
       - name: Upload stripped binary to release (aarch64 GNU only)
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
         uses: svenstaro/upload-release-action@v1-release
         with:
           repo_token: ${{ secrets.PUBLISH_TOKEN }}
